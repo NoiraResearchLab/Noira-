@@ -1,23 +1,43 @@
-interface TokenBirthEvent {
-  mint string
-  createdAt number
-  initialLiquidity number
-  creatorWallet string
+export interface NeuroModule {
+  id: string
+  label: string
+  active: boolean
+  priority: number
+  init(): void
+  shutdown(): void
 }
 
-interface TokenLifecycleFlag {
-  mint string
-  suspiciousStart boolean
-  lowLiquidityLaunch boolean
+export const coreModuleMap: Record<string, NeuroModule> = {
+  perception: {
+    id: "perception",
+    label: "Perception Matrix",
+    active: true,
+    priority: 1,
+    init: () => console.log("[Perception] initialized."),
+    shutdown: () => console.log("[Perception] terminated.")
+  },
+  cognition: {
+    id: "cognition",
+    label: "Cognitive Engine",
+    active: false,
+    priority: 2,
+    init: () => console.log("[Cognition] boot sequence started."),
+    shutdown: () => console.log("[Cognition] shutdown complete.")
+  },
+  recall: {
+    id: "recall",
+    label: "Vault Recall System",
+    active: false,
+    priority: 3,
+    init: () => console.log("[Recall] memory links connected."),
+    shutdown: () => console.log("[Recall] dismounted.")
+  }
 }
 
-export function watchNewTokenLifecycle(event TokenBirthEvent) TokenLifecycleFlag {
-  const now = Date.now()
-  const ageMinutes = (now - event.createdAt)  60000
-
-  return {
-    mint event.mint,
-    suspiciousStart ageMinutes  5 && event.initialLiquidity  500,
-    lowLiquidityLaunch event.initialLiquidity  1000
+export function activateModule(id: string): void {
+  const mod = coreModuleMap[id]
+  if (mod && !mod.active) {
+    mod.active = true
+    mod.init()
   }
 }
