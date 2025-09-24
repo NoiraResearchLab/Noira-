@@ -39,7 +39,7 @@ export function extractTokenMetrics(transactions: RawTransaction[]): TokenMetric
       recentTxCount++
     }
 
-    if (tx.amount > 10000) {
+    if (tx.amount > 10_000) {
       whaleTxCount++
     }
   }
@@ -47,4 +47,12 @@ export function extractTokenMetrics(transactions: RawTransaction[]): TokenMetric
   const averageTxAmount = totalAmount / transactions.length
   const txPerHour = recentTxCount
   const uniqueAddresses = addressSet.size
-  const whaleImpactScore = (whaleTxCount / transactions.lengt
+  const whaleImpactScore = whaleTxCount / transactions.length
+
+  return {
+    averageTxAmount,
+    txPerHour,
+    uniqueAddresses,
+    whaleImpactScore
+  }
+}
