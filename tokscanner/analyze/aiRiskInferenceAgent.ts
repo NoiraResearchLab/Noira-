@@ -1,35 +1,50 @@
 import { SolanaTokenInfo } from "./fetchSolanaTokenData"
 
+export interface RiskRule {
+  condition: boolean
+  weight: number
+  reason: string
+}
+
 export interface RiskInferenceResult {
   score: number
   verdict: "Safe" | "Suspicious" | "Risky"
-  reasons: string[]
+  details: Array<{ reason: string; weight: number }>
 }
 
 export function runRiskInference(token: SolanaTokenInfo): RiskInferenceResult {
-  const reasons: string[] = []
-  let score = 0
+  const ageInDays = token.creationTime
+    ? (Date.now() - token.creationTime) / (1000 * 60 * 60 * 24)
+    : Infinity
 
-  if (token.supply > 1_000_000_000) {
-    score += 20
-    reasons.push("Excessive total supply")
-  }
+  const rules: RiskRule[] = [
+    {
+      condition: token.supply > 1_000_000_000,
+      weight: 20,
+      reason: "Excessive total supply",
+    },
+    {
+      condition: token.decimals !== 9,
+      weight: 10,
+      reason: "Non-standard decimals",
+    },
+    {
+      condition: token.ownerCount < 30,
+      weight: 30,
+      reason: "Very few holders",
+    },
+    {
+      condition: ageInDays < 3,
+      weight: 20,
+      reason: "Recently created token",
+    },
+  ]
 
-  if (token.decimals !== 9) {
-    score += 10
-    reasons.push("Non-standard decimals")
-  }
-
-  if (token.ownerCount < 30) {
-    score += 30
-    reasons.push("Very few holders")
-  }
-
-  const ageInDays = (Date.now() - token.creationTime) / (1000 * 60 * 60 * 24)
-  if (ageInDays < 3) {
-    score += 20
-    reasons.push("Recently created token")
-  }
+  const triggered = rules.filter(r => r.condition)
+  const score = Math.min(
+    100,
+    triggered.reduce((s, r) => s + r.weight, 0)
+  )
 
   let verdict: "Safe" | "Suspicious" | "Risky" = "Safe"
   if (score >= 60) verdict = "Risky"
@@ -38,6 +53,6 @@ export function runRiskInference(token: SolanaTokenInfo): RiskInferenceResult {
   return {
     score,
     verdict,
-    reasons
+    details: triggered.map(r => ({ reason: r.reason, weight: r.weight })),
   }
 }
