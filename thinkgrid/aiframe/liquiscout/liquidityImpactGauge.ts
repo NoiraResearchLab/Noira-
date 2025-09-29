@@ -1,21 +1,32 @@
-interface ImpactEvent {
+export interface ImpactEvent {
+  /** token symbol or address */
   token: string
+  /** trade volume in USD */
   volumeUSD: number
+  /** pool liquidity in USD */
   poolLiquidity: number
+  /** unix timestamp (ms) */
   time: number
 }
 
-interface ImpactAssessment {
+export type SeverityLevel = "None" | "Moderate" | "Severe"
+
+export interface ImpactAssessment {
   token: string
   impactScore: number
-  severity: "None" | "Moderate" | "Severe"
+  severity: SeverityLevel
   notes: string
+  assessedAt: number
 }
 
 export function assessLiquidityImpact(event: ImpactEvent): ImpactAssessment {
-  const ratio = event.volumeUSD / (event.poolLiquidity || 1)
-  const impactScore = Math.min(1, ratio)
-  let severity: ImpactAssessment["severity"] = "None"
+  const denominator = event.poolLiquidity > 0 ? event.poolLiquidity : 1
+  const ratio = event.volumeUSD / denominator
+
+  // clamp to [0,1]
+  const impactScore = clamp(ratio, 0, 1)
+
+  let severity: SeverityLevel = "None"
   let notes = "No visible impact"
 
   if (impactScore > 0.7) {
@@ -30,10 +41,16 @@ export function assessLiquidityImpact(event: ImpactEvent): ImpactAssessment {
     token: event.token,
     impactScore: round(impactScore),
     severity,
-    notes
+    notes,
+    assessedAt: Date.now(),
   }
 }
 
-function round(n: number): number {
-  return Math.round(n * 100) / 100
+function round(n: number, decimals = 2): number {
+  const factor = 10 ** decimals
+  return Math.round(n * factor) / factor
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n))
 }
